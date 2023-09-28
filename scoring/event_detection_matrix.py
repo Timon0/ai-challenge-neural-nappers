@@ -1,3 +1,5 @@
+# source: https://www.kaggle.com/code/metric/event-detection-ap/comments#2432522
+
 import sys
 sys.path.append('../')
 

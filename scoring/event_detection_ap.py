@@ -1,3 +1,5 @@
+# source: https://www.kaggle.com/code/metric/event-detection-ap/output
+
 """Event Detection Average Precision
 
 An average precision metric for event detection in time series and
