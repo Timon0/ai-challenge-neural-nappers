@@ -17,9 +17,9 @@ class FixTimeRegressor():
             for index, row in x.iterrows():
                 datetime_object = datetime.strptime(row['timestamp'][:19].replace('T', ' '), '%Y-%m-%d %H:%M:%S')
                 if datetime_object.time() == self.wake_up_time.time():
-                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.0})
+                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 1.0})
                 elif datetime_object.time() == self.sleep_time.time():
-                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.0})
+                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 1.0})
 
                 p_bar.update(1)
         return pd.DataFrame(return_values)
