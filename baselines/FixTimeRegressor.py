@@ -5,20 +5,24 @@ import tqdm
 class FixTimeRegressor():
 
     def __init__(self, wake_up_time, sleep_time):
-        self.wake_up_time = datetime.strptime(wake_up_time, '%H:%M:%S')
-        self.sleep_time = datetime.strptime(sleep_time, '%H:%M:%S')
+        self.wake_up_time = wake_up_time
+        self.sleep_time = sleep_time
 
     def fit(self, x, y):
         pass
 
     def predict(self, x):
         return_values = []
-        with tqdm.tqdm(total=x.shape[0]) as p_bar:
-            for index, row in x.iterrows():
-                datetime_object = datetime.strptime(row['timestamp'][:19].replace('T', ' '), '%Y-%m-%d %H:%M:%S')
-                if datetime_object.time() == self.wake_up_time.time():
+        # x['timestamp'] = pd.to_datetime(x['timestamp'][:19].replace('T', ' '))
+        x['time'] = x['timestamp'].str[11:19]
+        need_rows = x[x['time'] == self.wake_up_time]
+        need_rows_2 = x[x['time'] == self.sleep_time]
+        dataframe = pd.concat([need_rows, need_rows_2], axis=0)
+        with tqdm.tqdm(total=dataframe.shape[0]) as p_bar:
+            for index, row in dataframe.iterrows():
+                if row['time'] == self.wake_up_time:
                     return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.5})
-                elif datetime_object.time() == self.sleep_time.time():
+                elif row['time'] == self.sleep_time:
                     return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.5})
 
                 p_bar.update(1)
