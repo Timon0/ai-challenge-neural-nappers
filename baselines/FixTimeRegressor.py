@@ -21,9 +21,9 @@ class FixTimeRegressor():
         with tqdm.tqdm(total=dataframe.shape[0]) as p_bar:
             for index, row in dataframe.iterrows():
                 if row['time'] == self.wake_up_time:
-                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.5})
+                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.5, 'timestamp': row['timestamp']})
                 elif row['time'] == self.sleep_time:
-                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.5})
+                    return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.5, 'timestamp': row['timestamp']})
 
                 p_bar.update(1)
         return pd.DataFrame(return_values)

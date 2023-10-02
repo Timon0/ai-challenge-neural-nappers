@@ -39,10 +39,10 @@ class TimeRangeRegressor:
     with tqdm.tqdm(total=df.shape[0]) as p_bar:
       for index, row in df.iterrows():
           if row['time'] == str(current_wake_up.time()):
-              return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.5})
+              return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'wakeup', 'score': 0.5, 'timestamp': row['timestamp']})
               current_wake_up = random.choice(self.wake_up_range)
           elif row['time'] == str(current_sleep.time()):
-              return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.5})
+              return_values.append({'row_id': len(return_values), 'series_id': row['series_id'], 'step': row['step'], 'event': 'onset', 'score': 0.5, 'timestamp': row['timestamp']})
               current_sleep = random.choice(self.sleep_range)
 
           p_bar.update(1)
