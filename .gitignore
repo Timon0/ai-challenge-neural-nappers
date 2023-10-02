@@ -163,4 +163,3 @@ sample_submission.csv
 test_series.parquet
 train_events.csv
 train_series.parquet
-results/
