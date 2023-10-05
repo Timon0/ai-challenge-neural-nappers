@@ -18,6 +18,7 @@ class FixTimeRegressor():
         need_rows = x[x['time'] == self.wake_up_time]
         need_rows_2 = x[x['time'] == self.sleep_time]
         dataframe = pd.concat([need_rows, need_rows_2], axis=0)
+        dataframe = dataframe.sort_values(['series_id', 'timestamp'])
         with tqdm.tqdm(total=dataframe.shape[0]) as p_bar:
             for index, row in dataframe.iterrows():
                 if row['time'] == self.wake_up_time:

@@ -5,18 +5,8 @@ import tqdm
 
 class TimeRangeRegressor:
 
-  def daterange(self, start, end):
-    print((end - start))
-    for n in range(int((end - start))):
-      yield start + timedelta(n)
-
-  def datetime_range(self, start, end, delta):
-    current = start
-    while current < end:
-        yield current
-        current += delta
-
-  def __init__(self, wake_up_range, sleep_range):
+  def __init__(self, wake_up_range, sleep_range, seed=42):
+    random.seed(seed)
     self.wake_up_range = []
     for time in self.datetime_range(datetime.strptime(wake_up_range[0], '%H:%M:%S'), datetime.strptime(wake_up_range[1], '%H:%M:%S'), timedelta(minutes=5)):
       self.wake_up_range.append(time)
@@ -24,6 +14,12 @@ class TimeRangeRegressor:
     for time in self.datetime_range(datetime.strptime(sleep_range[0], '%H:%M:%S'), datetime.strptime(sleep_range[1], '%H:%M:%S'), timedelta(minutes=5)):
       self.sleep_range.append(time)
   
+  def datetime_range(self, start, end, delta):
+    current = start
+    while current < end:
+        yield current
+        current += delta
+
   def fit(self, x, y):
     pass
 
