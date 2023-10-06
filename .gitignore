@@ -163,5 +163,7 @@ sample_submission.csv
 test_series.parquet
 train_events.csv
 train_series.parquet
-train_series_lightweight.parquet
+train_with_features.parquet
+train_with_features_lightweight_1.parquet
+train_with_features_lightweight_10.parquet
 train.parquet
