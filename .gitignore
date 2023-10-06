@@ -159,6 +159,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+config/
+wandb/
+checkpoints/
+
 sample_submission.csv
 test_series.parquet
 train_events.csv
