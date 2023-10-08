@@ -3,11 +3,13 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import AdamW
+from torchmetrics import MetricCollection
+from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
 
 
 class Model(L.LightningModule):
 
-    def __init__(self, model_name, n_feature, n_labels, hidden_dim, n_hidden_layers, learning_rate=1e-5):
+    def __init__(self, model_name, n_feature, n_labels, hidden_dim, n_hidden_layers, learning_rate):
         super().__init__()
 
         self.save_hyperparameters()
@@ -28,6 +30,12 @@ class Model(L.LightningModule):
         # loss function
         self.loss_fn = nn.CrossEntropyLoss()
 
+        # metrics
+        metrics = MetricCollection([
+            MulticlassAccuracy(num_classes=n_labels), MulticlassPrecision(num_classes=n_labels), MulticlassRecall(num_classes=n_labels), MulticlassF1Score(num_classes=n_labels)
+        ])
+        self.valid_metrics = metrics.clone(prefix='val_')
+
     def forward(self, x):
         x = self.up_projection(x)
         x = F.relu(x)
@@ -46,35 +54,18 @@ class Model(L.LightningModule):
         loss = self.loss_fn(logits, y)
 
         self.log('train_loss', loss)
-        return {'loss': loss}
+        return loss
 
     def validation_step(self, batch, batch_nb):
         X, y = batch
         logits = self(X)
 
-        # Apart from the validation loss, we also want to track validation accuracy to get an idea, what the
-        # model training has achieved "in real terms".
         loss = self.loss_fn(logits, y)
-        predictions = torch.argmax(logits, dim=-1)
-        accuracy = (y == predictions).float().mean()
+        valid_metrics = self.valid_metrics(logits, y)
 
         self.log('val_loss', loss)
-        self.log('val_accuracy', accuracy)
-        return {'val_loss': loss, 'val_accuracy': accuracy}
-
-    def test_step(self, batch, batch_nb):
-        X, y = batch
-        logits = self(X)
-
-        # Apart from the test loss, we also want to track test accuracy to get an idea, what the
-        # model training has achieved "in real terms".
-        loss = self.loss_fn(logits, y)
-        predictions = torch.argmax(logits, dim=-1)
-        accuracy = (y == predictions).float().mean()
-
-        self.log('test_loss', loss)
-        self.log('test_accuracy', accuracy)
-        return {'test_loss': loss, 'test_accuracy': accuracy}
+        self.log_dict(valid_metrics)
+        return loss
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.hparams.learning_rate)
