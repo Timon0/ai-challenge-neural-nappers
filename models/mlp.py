@@ -1,71 +1,94 @@
 import lightning as L
 import torch
-import torch.nn as nn
-from torch.nn import functional as F
+import torch.nn.functional as F
 from torch.optim import AdamW
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
+from data import FEATURES
 
 
-class Model(L.LightningModule):
+class PyTorchMLP(torch.nn.Module):
+    def __init__(self, num_features, hidden_dim, num_hidden_layers, num_classes):
+        super().__init__()
 
-    def __init__(self, model_name, n_feature, n_labels, hidden_dim, n_hidden_layers, learning_rate):
+        all_layers = []
+
+        # Initialize input layers
+        input_layer = torch.nn.Linear(num_features, hidden_dim)
+        all_layers.append(input_layer)
+        all_layers.append(torch.nn.ReLU())
+
+        # Initialize hidden layers
+        for _ in range(num_hidden_layers):
+            hidden_layer = torch.nn.Linear(hidden_dim, hidden_dim)
+            all_layers.append(hidden_layer)
+            all_layers.append(torch.nn.ReLU())
+
+        # Initialize output layers
+        output_layer = torch.nn.Linear(hidden_dim, num_classes)
+        all_layers.append(output_layer)
+
+        self.layers = torch.nn.Sequential(*all_layers)
+
+    def forward(self, x):
+        logits = self.layers(x)
+        return logits
+
+
+class LightningModel(L.LightningModule):
+
+    def __init__(self, model=None, hidden_dim=None, num_hidden_layers=None, learning_rate=None):
         super().__init__()
 
         self.save_hyperparameters()
 
-        self.n_feature = n_feature
-        self.n_labels = n_labels
+        self.num_features = len(FEATURES)
+        self.num_classes = 2
         self.hidden_dim = hidden_dim
-        self.n_hidden_layers = n_hidden_layers
+        self.num_hidden_layers = num_hidden_layers
         self.learning_rate = learning_rate
 
-        # model Layers
-        self.up_projection = nn.Linear(n_feature, hidden_dim)
-        self.hidden_layers = nn.ModuleList()
-        for i in range(0, n_hidden_layers):
-            self.hidden_layers.append(nn.Linear(hidden_dim, hidden_dim))
-        self.down_projection = nn.Linear(hidden_dim, n_labels)
-
-        # loss function
-        self.loss_fn = nn.CrossEntropyLoss()
+        # model
+        if model is None:
+            self.model = PyTorchMLP(self.num_features, self.hidden_dim, self.num_hidden_layers, self.num_classes)
 
         # metrics
         metrics = MetricCollection([
-            MulticlassAccuracy(num_classes=n_labels), MulticlassPrecision(num_classes=n_labels), MulticlassRecall(num_classes=n_labels), MulticlassF1Score(num_classes=n_labels)
+            MulticlassAccuracy(num_classes=self.num_classes),
+            MulticlassPrecision(num_classes=self.num_classes),
+            MulticlassRecall(num_classes=self.num_classes),
+            MulticlassF1Score(num_classes=self.num_classes)
         ])
-        self.valid_metrics = metrics.clone(prefix='val_')
+        self.train_metrics = metrics.clone(prefix='train_')
+        self.val_metrics = metrics.clone(prefix='val_')
 
     def forward(self, x):
-        x = self.up_projection(x)
-        x = F.relu(x)
-
-        for layer in self.hidden_layers:
-            x = layer(x)
-            x = F.relu(x)
-
-        x = self.down_projection(x)
-        return x
+        return self.model(x)
 
     def training_step(self, batch, batch_nb):
-        X, y = batch
-        logits = self(X)
-
-        loss = self.loss_fn(logits, y)
+        loss, true_labels, logits = self._shared_step(batch)
 
         self.log('train_loss', loss)
+        self.train_metrics(logits, true_labels)
+        self.log_dict(self.train_metrics, on_epoch=True, on_step=False)
+
         return loss
 
     def validation_step(self, batch, batch_nb):
-        X, y = batch
-        logits = self(X)
-
-        loss = self.loss_fn(logits, y)
-        valid_metrics = self.valid_metrics(logits, y)
+        loss, true_labels, logits = self._shared_step(batch)
 
         self.log('val_loss', loss)
-        self.log_dict(valid_metrics)
+        self.val_metrics(logits, true_labels)
+        self.log_dict(self.val_metrics)
+
         return loss
+
+    def _shared_step(self, batch):
+        features, true_labels = batch
+        logits = self(features)
+
+        loss = F.cross_entropy(logits, true_labels)
+        return loss, true_labels, logits
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.hparams.learning_rate)

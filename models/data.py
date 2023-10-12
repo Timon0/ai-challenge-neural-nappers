@@ -1,7 +1,6 @@
 import os
 
 import lightning as L
-from torch.nn import functional as F
 import pandas as pd
 import torch
 from sklearn.preprocessing import StandardScaler
@@ -16,10 +15,10 @@ FEATURES = ['anglez', 'enmo',
 LABEL = ['awake']
 
 
-class DataModule(L.LightningDataModule):
+class CustomDataModule(L.LightningDataModule):
     def __init__(self, batch_size: int = 100):
         super().__init__()
-        self.n_labels = 2
+        self.num_classes = 2
         self.features = FEATURES
         self.validation_dataset = None
         self.train_dataset = None
@@ -64,8 +63,8 @@ class DataModule(L.LightningDataModule):
     def predict_dataloader(self):
         pass
 
-    def get_n_features(self):
+    def get_num_features(self):
         return len(self.features)
 
-    def get_n_labels(self):
-        return self.n_labels
+    def get_num_classes(self):
+        return self.num_classes
