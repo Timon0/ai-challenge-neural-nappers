@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
-from data import FEATURES
 
 
 class PyTorchMLP(torch.nn.Module):
@@ -42,7 +41,7 @@ class LightningModel(L.LightningModule):
 
         self.save_hyperparameters()
 
-        self.num_features = len(FEATURES)
+        self.num_features = 14
         self.num_classes = 2
         self.hidden_dim = hidden_dim
         self.num_hidden_layers = num_hidden_layers
