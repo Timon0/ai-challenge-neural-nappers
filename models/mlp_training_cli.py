@@ -25,7 +25,7 @@ if __name__ == "__main__":
         data = json.load(jsonfile)
         subscription_key = data["wandb"]["subscription_key"]
     wandb.login(key=subscription_key)
-    wandb_logger = WandbLogger(project="neural-nappers")
+    wandb_logger = WandbLogger(project="neural-nappers", log_model=True)
 
     # Callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         monitor="val_loss",
         mode="min"
     )
-    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=1)
+    early_stopping_callback = EarlyStopping(mode="min", monitor="val_loss", patience=1)
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     cli = LightningCLI(
