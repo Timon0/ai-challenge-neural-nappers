@@ -27,8 +27,8 @@ class CustomDataModule(L.LightningDataModule):
     def prepare_data(self):
         # load data
         dirname = os.path.dirname(__file__)
-        df_train = pd.read_parquet(os.path.join(dirname, '../data/processed/train_split.parquet'))
-        df_validation = pd.read_parquet(os.path.join(dirname, '../data/processed/validation_split.parquet'))
+        df_train = pd.read_parquet(os.path.join(dirname, '../data/processed/train_series_split.parquet'))
+        df_validation = pd.read_parquet(os.path.join(dirname, '../data/processed/validation_series_split.parquet'))
 
         # split into x and y
         X_train = df_train[FEATURES].astype('float32')

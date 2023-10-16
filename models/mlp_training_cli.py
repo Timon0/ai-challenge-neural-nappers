@@ -41,6 +41,7 @@ if __name__ == "__main__":
         model_class=LightningModel,
         datamodule_class=CustomDataModule,
         run=False,
+        save_config_kwargs={"overwrite": True},
         seed_everything_default=42,
         trainer_defaults={
             "callbacks": [checkpoint_callback, early_stopping_callback, lr_monitor],
