@@ -171,3 +171,6 @@ train_with_features.parquet
 train_with_features_lightweight_1.parquet
 train_with_features_lightweight_10.parquet
 train.parquet
+*events_split.*
+*.parquet
+predicted_events.csv
