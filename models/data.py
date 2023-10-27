@@ -4,15 +4,45 @@ import lightning as L
 import pandas as pd
 import torch
 from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, Dataset
 
-FEATURES = ['anglez', 'enmo',
-            'hour',
-            'anglez_abs', 'anglez_diff', 'enmo_diff', 'anglez_x_enmo',
-            'anglez_rolling_mean', 'enmo_rolling_mean', 'anglez_rolling_max', 'enmo_rolling_max', 'anglez_rolling_min',
-            'anglez_rolling_std', 'enmo_rolling_std']
+ANGLEZ_LAGS_FUTURE = [f"anglez_future-lag_{i}" for i in range(-1, -25, -1)]
+ENMO_LAGS_FUTURE = [f"enmo_future-lag_{i}" for i in range(-1, -25, -1)]
+ANGLEZ_LAGS_PAST = [f"anglez_past-lag_{i}" for i in range(1, 25)]
+ENMO_LAGS_PAST = [f"enmo_past-lag_{i}" for i in range(1, 25)]
+LAGS_FUTURE = [*ANGLEZ_LAGS_FUTURE, *ENMO_LAGS_FUTURE]
+LAGS_PAST = [*ANGLEZ_LAGS_PAST, *ANGLEZ_LAGS_PAST]
+FEATURES = ['anglez', 'enmo', *LAGS_PAST, *LAGS_FUTURE]
 
 LABEL = ['awake']
+
+
+class CustomDataSet(Dataset):
+    def __init__(self, overview, root_dir):
+        self.overview = overview
+        self.root_dir = root_dir
+
+        self.cache_series_id = None
+        self.cache_series = None
+
+    def __len__(self):
+        return len(self.overview)
+
+    def __getitem__(self, idx):
+        series_id, step = self.overview.iloc[idx]
+
+        if self.cache_series_id != series_id:
+            path = os.path.join(self.root_dir, series_id + ".parquet")
+            series = pd.read_parquet(path)
+            self.cache_series_id = series_id
+            self.cache_series = series
+
+        step = self.cache_series[self.cache_series.step == step]
+
+        X = torch.from_numpy(step[FEATURES].values).squeeze(0)
+        y = torch.from_numpy(step[LABEL].astype('int64').to_numpy()).squeeze(0, 1)
+
+        return X, y
 
 
 class CustomDataModule(L.LightningDataModule):
@@ -27,35 +57,20 @@ class CustomDataModule(L.LightningDataModule):
     def prepare_data(self):
         # load data
         dirname = os.path.dirname(__file__)
-        df_train = pd.read_parquet(os.path.join(dirname, '../data/processed/train_series_split.parquet'))
-        df_validation = pd.read_parquet(os.path.join(dirname, '../data/processed/validation_series_split.parquet'))
+        train_root_dir = os.path.join(dirname, "../data/processed/v2/train")
+        validation_root_dir = os.path.join(dirname, "../data/processed/v2/validation")
 
-        # split into x and y
-        X_train = df_train[FEATURES].astype('float32')
-        y_train = df_train[LABEL].astype('int64')
-        X_validation = df_validation[FEATURES].astype('float32')
-        y_validation = df_validation[LABEL].astype('int64')
+        train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'))
+        validation_overview = pd.read_parquet(os.path.join(validation_root_dir, 'overview.parquet'))
 
-        # scale data
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_validation = scaler.transform(X_validation)
-
-        # convert to tensor
-        X_train = torch.from_numpy(X_train)
-        y_train = torch.from_numpy(y_train.to_numpy()).squeeze(1)
-        X_validation = torch.from_numpy(X_validation)
-        y_validation = torch.from_numpy(y_validation.to_numpy()).squeeze(1)
-
-        # create dataset
-        self.train_dataset = TensorDataset(X_train, y_train)
-        self.validation_dataset = TensorDataset(X_validation, y_validation)
+        self.train_dataset = CustomDataSet(train_overview, train_root_dir)
+        self.validation_dataset = CustomDataSet(validation_overview, validation_root_dir)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=4)
 
     def val_dataloader(self):
-        return DataLoader(self.validation_dataset, batch_size=self.batch_size)
+        return DataLoader(self.validation_dataset, batch_size=self.batch_size, num_workers=4)
 
     def test_dataloader(self):
         pass
