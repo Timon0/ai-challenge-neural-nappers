@@ -10,7 +10,7 @@ ENMO_LAGS_FUTURE = [f"enmo_future-lag_{i}" for i in range(-1, -25, -1)]
 ANGLEZ_LAGS_PAST = [f"anglez_past-lag_{i}" for i in range(1, 25)]
 ENMO_LAGS_PAST = [f"enmo_past-lag_{i}" for i in range(1, 25)]
 LAGS_FUTURE = [*ANGLEZ_LAGS_FUTURE, *ENMO_LAGS_FUTURE]
-LAGS_PAST = [*ANGLEZ_LAGS_PAST, *ANGLEZ_LAGS_PAST]
+LAGS_PAST = [*ANGLEZ_LAGS_PAST, *ENMO_LAGS_PAST]
 FEATURES = ['anglez', 'enmo', *LAGS_PAST, *LAGS_FUTURE]
 
 LABEL = ['awake']
