@@ -18,7 +18,6 @@ if __name__ == "__main__":
 
     # Params
     model_name = "nn"
-    batch_size = 8
 
     # Logger
     # with open("../config/config.json", "r") as jsonfile:

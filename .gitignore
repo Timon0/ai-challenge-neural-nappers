@@ -174,3 +174,7 @@ train.parquet
 *events_split.*
 *.parquet
 predicted_events.csv
+
+train/
+validation/
+lightning_logs/
