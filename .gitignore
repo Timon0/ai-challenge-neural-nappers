@@ -178,3 +178,7 @@ predicted_events.csv
 train/
 validation/
 lightning_logs/
+
+data/raw/
+data/processed/
+data/cleaned/

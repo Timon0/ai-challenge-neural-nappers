@@ -9,7 +9,7 @@ Steps:
 3. data-merge.ipynb
 4. train-test-split.ipynb
 5. data-normalization.ipynb
-6. feature-engineering-lags.ipynb (run for train and validation split)
+6. feature-engineering-lags{-transformer}.ipynb (run for train and validation split)
 
 
 ## Data Preperation with handcrafted Features
