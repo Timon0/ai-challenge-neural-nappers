@@ -32,8 +32,8 @@ if __name__ == "__main__":
         save_config_kwargs={"overwrite": True},
         seed_everything_default=42,
         trainer_defaults={
-            #"logger": wandb_logger,
             "callbacks": [checkpoint_callback, early_stopping_callback, lr_monitor],
+            "logger": {wandb_logger},
             "max_epochs": 5
         },
     )
