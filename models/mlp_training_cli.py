@@ -20,11 +20,11 @@ if __name__ == "__main__":
     model_name = "nn"
 
     # Logger
-    # with open("../config/config.json", "r") as jsonfile:
-    #     data = json.load(jsonfile)
-    #     subscription_key = data["wandb"]["subscription_key"]
-    # wandb.login(key=subscription_key)
-    # wandb_logger = WandbLogger(project="neural-nappers", log_model=True)
+    with open("../config/config.json", "r") as jsonfile:
+        data = json.load(jsonfile)
+        subscription_key = data["wandb"]["subscription_key"]
+    wandb.login(key=subscription_key)
+    wandb_logger = WandbLogger(project="neural-nappers", log_model=True)
 
     # Callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         seed_everything_default=42,
         trainer_defaults={
             "callbacks": [checkpoint_callback, early_stopping_callback, lr_monitor],
-            # "logger": wandb_logger,
+            "logger": {wandb_logger},
             "max_epochs": 5
         },
     )

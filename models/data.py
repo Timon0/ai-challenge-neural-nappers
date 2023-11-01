@@ -30,17 +30,15 @@ class CustomDataSet(Dataset):
         return len(self.overview)
 
     def __getitem__(self, idx):
-        series_id, index_in_series = self.overview[idx]
+        series_id, label, index_in_series = self.overview[idx]
 
         if self.cache_series_id != series_id:
-            path = os.path.join(self.root_dir, str(series_id.item()) + ".feather")
-            series = pd.read_feather(path)
-
             self.cache_series_id = series_id
-            self.cache_series_X = torch.from_numpy(series[FEATURES].astype('float32').to_numpy())
-            self.cache_series_y = torch.from_numpy(series[LABEL].astype('int64').to_numpy()).squeeze(1)
 
-        return self.cache_series_X[index_in_series], self.cache_series_y[index_in_series]
+            path = os.path.join(self.root_dir, str(series_id.item()) + ".pt")
+            self.cache_series_X = torch.load(path)
+
+        return self.cache_series_X[index_in_series], label
 
 
 class CustomDataModule(L.LightningDataModule):
@@ -58,9 +56,9 @@ class CustomDataModule(L.LightningDataModule):
         train_root_dir = os.path.join(dirname, "../data/processed/lag-features/train")
         validation_root_dir = os.path.join(dirname, "../data/processed/lag-features/validation")
 
-        train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'), columns=['num_series_id', 'series_index'])
+        train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
         train_overview = train_overview.astype('int64')
-        validation_overview = pd.read_parquet(os.path.join(validation_root_dir, 'overview.parquet'), columns=['num_series_id', 'series_index'])
+        validation_overview = pd.read_parquet(os.path.join(validation_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
         validation_overview = validation_overview.astype('int64')
 
         self.train_dataset = CustomDataSet(torch.from_numpy(train_overview.values), train_root_dir)
