@@ -174,5 +174,14 @@ train.parquet
 *events_split.*
 *.parquet
 predicted_events.csv
+
+train/
+validation/
+lightning_logs/
+
+data/raw/
+data/processed/
+data/cleaned/
+
 models/4.18.0
 data/processed/v2/scaler.gz
