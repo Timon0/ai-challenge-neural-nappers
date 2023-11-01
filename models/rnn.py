@@ -5,10 +5,11 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
+from torch.autograd import Variable
 
 
 class PyTorchRNN(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_hidden_layers, num_classes):
+    def __init__(self, input_dim, hidden_dim, num_hidden_layers, num_classes, seq_len):
         super(PyTorchRNN, self).__init__()
         
         # Number of hidden dimensions
@@ -16,6 +17,7 @@ class PyTorchRNN(torch.nn.Module):
         
         # Number of hidden layers
         self.layer_dim = num_hidden_layers
+        self.seq_len = seq_len
         
         # RNN
         self.rnn = torch.nn.RNN(input_dim, hidden_dim, num_hidden_layers, batch_first=True, nonlinearity='relu')
@@ -25,31 +27,29 @@ class PyTorchRNN(torch.nn.Module):
     
     def forward(self, x):
         
-        # Initialize hidden state with zeros
-        h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+        out, _ = self.rnn(x)
             
-        # One time step
-        out, hn = self.rnn(x, h0)
-        out = self.fc(out[:, -1, :]) 
+        out = self.fc(out)
         return out
 
 
 class LightningModel(L.LightningModule):
 
-    def __init__(self, model=None, hidden_dim=None, num_hidden_layers=None, learning_rate=None):
+    def __init__(self, model=None, hidden_dim=None, num_hidden_layers=None, learning_rate=None, seq_len=None):
         super().__init__()
 
         self.save_hyperparameters()
 
-        self.num_features = 14
+        self.num_features = 98
         self.num_classes = 2
         self.hidden_dim = hidden_dim
         self.num_hidden_layers = num_hidden_layers
         self.learning_rate = learning_rate
+        self.seq_len = seq_len
 
         # model
         if model is None:
-            self.model = PyTorchRNN(self.num_features, self.hidden_dim, self.num_hidden_layers, self.num_classes)
+            self.model = PyTorchRNN(self.num_features, self.hidden_dim, self.num_hidden_layers, self.num_classes, self.seq_len)
 
         # metrics
         metrics = MetricCollection([
@@ -84,8 +84,8 @@ class LightningModel(L.LightningModule):
 
     def _shared_step(self, batch):
         features, true_labels = batch
+        
         logits = self(features)
-
         loss = F.cross_entropy(logits, true_labels)
         return loss, true_labels, logits
 
