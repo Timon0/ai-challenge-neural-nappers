@@ -1,18 +1,20 @@
 import torch
-from torch import nn
+from torch import nn, Tensor
 import torch.nn.functional as F
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR
 import lightning as L
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
-import time
+import math
 
 class TransformerEncoderClassifier(nn.Module):
 
     def __init__(self, encoder_layer_dim=2, encoder_layer_nhead=8, num_features=2, num_layers=6, num_classes=2,
-                 sequence_length=49):
+                 sequence_length=49, dropout: float = 0.5):
         super().__init__()
+
+        self.model_type = 'Transformer'
 
         self.encoder_layer_dim = encoder_layer_dim
         self.encoder_layer_nhead = encoder_layer_nhead
@@ -21,6 +23,8 @@ class TransformerEncoderClassifier(nn.Module):
         self.num_classes = num_classes
         self.sequence_length = sequence_length
 
+        self.pos_encoder = PositionalEncoding(self.encoder_layer_dim, dropout)
+
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.encoder_layer_dim,
                                                         nhead=self.encoder_layer_nhead,
                                                         batch_first=True)
@@ -28,18 +32,22 @@ class TransformerEncoderClassifier(nn.Module):
 
         self.feature_linear = nn.Linear(self.num_features, 1)
         self.sequence_linear = nn.Linear(self.sequence_length, self.num_classes)
+        self.softmax = torch.nn.Softmax(dim=1)
 
         self.init_weights()
 
-    def forward(self, x):
-        output = self.transformer_encoder(x)
+    def forward(self, src):
+        src = self.pos_encoder(src)
+        output = self.transformer_encoder(src)
         output = self.feature_linear(output)
         output = torch.squeeze(output, dim=2)
         output = self.sequence_linear(output)
+        output = self.softmax(output)
         return output
 
     def init_weights(self) -> None:
         init_range = 0.1
+
         self.feature_linear.bias.data.zero_()
         self.feature_linear.weight.data.uniform_(-init_range, init_range)
 
@@ -123,3 +131,25 @@ class LightningModel(L.LightningModule):
         dataset_size = len(train_dataloader.dataset)
         num_steps = dataset_size * self.trainer.max_epochs // self.trainer.datamodule.batch_size
         return num_steps
+
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
