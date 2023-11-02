@@ -182,3 +182,6 @@ lightning_logs/
 data/raw/
 data/processed/
 data/cleaned/
+
+models/4.18.0
+data/processed/v2/scaler.gz

@@ -26,7 +26,7 @@ if __name__ == "__main__":
         data = json.load(jsonfile)
         subscription_key = data["wandb"]["subscription_key"]
     wandb.login(key=subscription_key)
-    wandb_logger = WandbLogger(project="aich", log_model=True)
+    wandb_logger = WandbLogger(project="neural-nappers", log_model=True)
 
     # Callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -51,12 +51,12 @@ if __name__ == "__main__":
     #    },
     #)
 
-    rnnModel = LightningModel(num_hidden_layers=14, hidden_dim=100, learning_rate=0.005)
+    rnnModel = LightningModel(num_hidden_layers=14, hidden_dim=128, learning_rate=0.005, seq_len=1)
     #cli.trainer.fit(rnnModel, CustomDataModule())
     trainer = Trainer(
         logger=wandb_logger,
         max_epochs=5,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback, early_stopping_callback, lr_monitor]
     )
 
-    trainer.fit(rnnModel, datamodule=CustomDataModule())
+    trainer.fit(rnnModel, datamodule=CustomDataModule(batch_size=batch_size))
