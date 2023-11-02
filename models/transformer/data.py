@@ -8,8 +8,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 LAGS_FUTURE = [f"t_lag_{i}" for i in range(-1, -25, -1)]
-LAGS_PAST = [f"t_lag_{i}" for i in range(1, 25)]
-FEATURES = ['t_0', *LAGS_PAST, *LAGS_FUTURE]
+LAGS_PAST = reversed([f"t_lag_{i}" for i in range(1, 25)])
+FEATURES = [*LAGS_PAST, 't_0', *LAGS_FUTURE]
 
 LABEL = ['awake']
 
@@ -21,7 +21,6 @@ class CustomDataSet(Dataset):
 
         self.cache_series_id = None
         self.cache_series_X = None
-        self.cache_series_y = None
 
     def __len__(self):
         return len(self.overview)
@@ -51,7 +50,7 @@ class CustomDataModule(L.LightningDataModule):
         # load data
         dirname = os.path.dirname(__file__)
         train_root_dir = os.path.join(dirname, "../../data/processed/transformer/train")
-        validation_root_dir = os.path.join(dirname, "../../data/processed/transformer/train")
+        validation_root_dir = os.path.join(dirname, "../../data/processed/transformer/validation")
 
         train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
         train_overview = train_overview.astype('int64')
