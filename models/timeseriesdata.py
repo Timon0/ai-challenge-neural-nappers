@@ -6,43 +6,34 @@ import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 
-ANGLEZ_LAGS_FUTURE = [f"anglez_future-lag_{i}" for i in range(-1, -25, -1)]
-ENMO_LAGS_FUTURE = [f"enmo_future-lag_{i}" for i in range(-1, -25, -1)]
-ANGLEZ_LAGS_PAST = [f"anglez_past-lag_{i}" for i in range(1, 25)]
-ENMO_LAGS_PAST = [f"enmo_past-lag_{i}" for i in range(1, 25)]
-LAGS_FUTURE = [*ANGLEZ_LAGS_FUTURE, *ENMO_LAGS_FUTURE]
-LAGS_PAST = [*ANGLEZ_LAGS_PAST, *ANGLEZ_LAGS_PAST]
-FEATURES = ['anglez', 'enmo', *LAGS_PAST, *LAGS_FUTURE]
+LAGS_FUTURE = [f"t_lag_{i}" for i in range(-1, -25, -1)]
+LAGS_PAST = [f"t_lag_{i}" for i in range(1, 25)]
+FEATURES = ['t_0', *LAGS_PAST, *LAGS_FUTURE]
 
 LABEL = ['awake']
 
 class CustomTimeSeriesDataSet(Dataset):
-    def __init__(self, overview, root_dir, seq_len = 1):
+    def __init__(self, overview, root_dir):
         self.overview = overview
         self.root_dir = root_dir
-        self.seq_len = seq_len
-
+        
         self.cache_series_id = None
-        self.cache_series = None
+        self.cache_series_X = None
+        self.cache_series_y = None
 
     def __len__(self):
         return len(self.overview)
 
     def __getitem__(self, idx):
-        series_id, step = self.overview.iloc[idx]
+        series_id, label, index_in_series = self.overview[idx]
 
         if self.cache_series_id != series_id:
-            path = os.path.join(self.root_dir, series_id + ".parquet")
-            series = pd.read_parquet(path)
             self.cache_series_id = series_id
-            self.cache_series = series
 
-        steps = self.cache_series[(self.cache_series.step >= step) & (self.cache_series.step < (step + self.seq_len))]
-        setps_y = self.cache_series[(self.cache_series.step == (step + self.seq_len-1))]
-        X = torch.from_numpy(steps[FEATURES].values).squeeze(0)
-        y = torch.from_numpy(setps_y[LABEL].astype('int64').to_numpy()).squeeze(0, 1)
-        
-        return X, y
+            path = os.path.join(self.root_dir, str(series_id.item()) + ".pt")
+            self.cache_series_X = torch.load(path)
+
+        return self.cache_series_X[index_in_series], label
 
 class CustomTimeSeriesDataModule(L.LightningDataModule):
     def __init__(self, batch_size: int = 100, seq_len: int = 24):
@@ -57,20 +48,22 @@ class CustomTimeSeriesDataModule(L.LightningDataModule):
     def prepare_data(self):
         # load data
         dirname = os.path.dirname(__file__)
-        train_root_dir = os.path.join(dirname, "../data/processed/v2/train")
-        validation_root_dir = os.path.join(dirname, "../data/processed/v2/validation")
+        train_root_dir = os.path.join(dirname, "../data/transformer/train")
+        validation_root_dir = os.path.join(dirname, "../data/transformer/validation")
 
-        train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'))
-        validation_overview = pd.read_parquet(os.path.join(validation_root_dir, 'overview.parquet'))
+        train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
+        train_overview = train_overview.astype('int64')
+        validation_overview = pd.read_parquet(os.path.join(validation_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
+        validation_overview = validation_overview.astype('int64')
 
-        self.train_dataset = CustomTimeSeriesDataSet(train_overview, train_root_dir, self.seq_len)
-        self.validation_dataset = CustomTimeSeriesDataSet(validation_overview, validation_root_dir, self.seq_len)
+        self.train_dataset = CustomTimeSeriesDataSet(torch.from_numpy(train_overview.values), train_root_dir)
+        self.validation_dataset = CustomTimeSeriesDataSet(torch.from_numpy(validation_overview.values), validation_root_dir)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=4, shuffle=False)
 
     def val_dataloader(self):
-        return DataLoader(self.validation_dataset, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(self.validation_dataset, batch_size=self.batch_size, num_workers=4, shuffle=False)
 
     def test_dataloader(self):
         pass
