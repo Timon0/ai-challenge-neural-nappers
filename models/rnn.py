@@ -20,32 +20,36 @@ class PyTorchRNN(torch.nn.Module):
         self.seq_len = seq_len
         
         # RNN
-        self.rnn = torch.nn.RNN(input_dim, hidden_dim, num_hidden_layers, batch_first=True, nonlinearity='relu')
+        self.rnn = torch.nn.LSTM (input_dim, hidden_dim, num_hidden_layers, batch_first=True)
         
         # Readout layer
         self.fc = torch.nn.Linear(hidden_dim, num_classes)
+
+        self.softmax = torch.nn.Softmax(dim=1)
     
     def forward(self, x):
         
         out, _ = self.rnn(x)
             
-        out = self.fc(out)
+        out = self.fc(out[:,-1])
+        out = self.softmax(out)
+        #print(out)
         return out
 
 
 class LightningModel(L.LightningModule):
 
     def __init__(self, model=None, hidden_dim=None, num_hidden_layers=None, learning_rate=None, seq_len=None):
-        super().__init__()
+        super(LightningModel, self).__init__()
 
         self.save_hyperparameters()
 
-        self.num_features = 98
+        self.num_features = 2
         self.num_classes = 2
         self.hidden_dim = hidden_dim
         self.num_hidden_layers = num_hidden_layers
         self.learning_rate = learning_rate
-        self.seq_len = seq_len
+        self.seq_len = 49
 
         # model
         if model is None:
@@ -70,8 +74,13 @@ class LightningModel(L.LightningModule):
         self.log('train_loss', loss)
         self.train_metrics(logits, true_labels)
         self.log_dict(self.train_metrics, on_epoch=True, on_step=False)
-
+        # stop gradients from exploding and getting a "NaN" loss
+        #print(self.model.parameters)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 10)
         return loss
+    
+    def training_step_end(self, training_step_outputs):
+        return {'loss': training_step_outputs['loss'].sum()}
 
     def validation_step(self, batch, batch_nb):
         loss, true_labels, logits = self._shared_step(batch)

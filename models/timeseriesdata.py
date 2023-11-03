@@ -16,8 +16,6 @@ FEATURES = ['anglez', 'enmo', *LAGS_PAST, *LAGS_FUTURE]
 
 LABEL = ['awake']
 
-
-
 class CustomTimeSeriesDataSet(Dataset):
     def __init__(self, overview, root_dir, seq_len = 1):
         self.overview = overview
@@ -40,21 +38,21 @@ class CustomTimeSeriesDataSet(Dataset):
             self.cache_series = series
 
         steps = self.cache_series[(self.cache_series.step >= step) & (self.cache_series.step < (step + self.seq_len))]
-        
+        setps_y = self.cache_series[(self.cache_series.step == (step + self.seq_len-1))]
         X = torch.from_numpy(steps[FEATURES].values).squeeze(0)
-        y = torch.from_numpy(steps[LABEL].astype('int64').to_numpy()).squeeze(0, 1)
+        y = torch.from_numpy(setps_y[LABEL].astype('int64').to_numpy()).squeeze(0, 1)
         
         return X, y
 
 class CustomTimeSeriesDataModule(L.LightningDataModule):
-    def __init__(self, batch_size: int = 100):
+    def __init__(self, batch_size: int = 100, seq_len: int = 24):
         super().__init__()
         self.num_classes = 2
         self.features = FEATURES
         self.validation_dataset = None
         self.train_dataset = None
         self.batch_size = batch_size
-        self.seq_len = 1
+        self.seq_len = seq_len
 
     def prepare_data(self):
         # load data
@@ -69,10 +67,10 @@ class CustomTimeSeriesDataModule(L.LightningDataModule):
         self.validation_dataset = CustomTimeSeriesDataSet(validation_overview, validation_root_dir, self.seq_len)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=4, shuffle=False)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=False)
 
     def val_dataloader(self):
-        return DataLoader(self.validation_dataset, batch_size=self.batch_size, num_workers=4, shuffle=False)
+        return DataLoader(self.validation_dataset, batch_size=self.batch_size, shuffle=False)
 
     def test_dataloader(self):
         pass

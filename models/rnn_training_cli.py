@@ -9,6 +9,7 @@ from lightning.pytorch import Trainer
 from watermark import watermark
 
 from data import CustomDataModule
+from timeseriesdata import CustomTimeSeriesDataModule
 from rnn import LightningModel, PyTorchRNN
 
 if __name__ == "__main__":
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     #    },
     #)
 
-    rnnModel = LightningModel(num_hidden_layers=14, hidden_dim=128, learning_rate=0.005, seq_len=1)
+    rnnModel = LightningModel(num_hidden_layers=2, hidden_dim=128, learning_rate=0.000005)
     #cli.trainer.fit(rnnModel, CustomDataModule())
     trainer = Trainer(
         logger=wandb_logger,
@@ -59,4 +60,4 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback, early_stopping_callback, lr_monitor]
     )
 
-    trainer.fit(rnnModel, datamodule=CustomDataModule(batch_size=batch_size))
+    trainer.fit(rnnModel, datamodule=CustomTimeSeriesDataModule(batch_size=batch_size))
