@@ -27,7 +27,7 @@ class CustomDataSet(Dataset):
             path = os.path.join(self.root_dir, str(series_id.item()) + ".pt")
             self.cache_series_X = torch.load(path)
 
-        return self.cache_series_X[index_in_series], label
+        return torch.transpose(self.cache_series_X[index_in_series], 0, 1), label
 
 
 class CustomDataModule(L.LightningDataModule):
