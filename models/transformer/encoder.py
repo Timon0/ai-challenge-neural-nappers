@@ -8,51 +8,55 @@ from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision, MulticlassRecall, MulticlassF1Score
 import math
 
+
+class ClassificationHead(nn.Module):
+    def __init__(self, d_model, seq_len, n_classes: int = 2):
+        super().__init__()
+        self.norm = nn.LayerNorm(d_model)
+        self.seq = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(d_model * seq_len, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, n_classes)
+        )
+
+    def forward(self, x):
+        x = self.norm(x)
+        x = self.seq(x)
+        return x
+
+
 class TransformerEncoderClassifier(nn.Module):
 
-    def __init__(self, encoder_layer_dim=2, encoder_layer_nhead=8, num_features=2, num_layers=6, num_classes=2,
-                 sequence_length=49, dropout: float = 0.5):
+    def __init__(self, num_features=2, encoder_layer_nhead=4, num_layers=2, num_classes=2,
+                 sequence_length=49, dropout: float = 0.1):
         super().__init__()
 
         self.model_type = 'Transformer'
 
-        self.encoder_layer_dim = encoder_layer_dim
         self.encoder_layer_nhead = encoder_layer_nhead
         self.num_features = num_features
         self.num_layers = num_layers
         self.num_classes = num_classes
         self.sequence_length = sequence_length
 
-        self.pos_encoder = PositionalEncoding(self.encoder_layer_dim, dropout)
+        self.pos_encoder = PositionalEncoding(self.num_features, dropout, self.sequence_length)
 
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.encoder_layer_dim,
-                                                        nhead=self.encoder_layer_nhead,
-                                                        batch_first=True)
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=self.num_layers)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=self.num_features,
+                                                   nhead=self.encoder_layer_nhead,
+                                                   batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.num_layers)
 
-        self.feature_linear = nn.Linear(self.num_features, 1)
-        self.sequence_linear = nn.Linear(self.sequence_length, self.num_classes)
-        self.softmax = torch.nn.Softmax(dim=1)
-
-        self.init_weights()
+        self.classifier = ClassificationHead(seq_len=sequence_length, d_model=num_features, n_classes=num_classes)
 
     def forward(self, src):
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src)
-        output = self.feature_linear(output)
-        output = torch.squeeze(output, dim=2)
-        output = self.sequence_linear(output)
-        output = self.softmax(output)
-        return output
-
-    def init_weights(self) -> None:
-        init_range = 0.1
-
-        self.feature_linear.bias.data.zero_()
-        self.feature_linear.weight.data.uniform_(-init_range, init_range)
-
-        self.sequence_linear.bias.data.zero_()
-        self.sequence_linear.weight.data.uniform_(-init_range, init_range)
+        output = self.encoder(src)
+        return self.classifier(output)
 
 
 class LightningModel(L.LightningModule):
@@ -73,7 +77,6 @@ class LightningModel(L.LightningModule):
         if model is None:
             self.model = TransformerEncoderClassifier(self.num_features,
                                                       self.encoder_layer_nhead,
-                                                      self.num_features,
                                                       self.num_layers,
                                                       self.num_classes,
                                                       self.sequence_length)
@@ -134,22 +137,52 @@ class LightningModel(L.LightningModule):
 
 
 class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_length: int = 5000):
+        """
+        Args:
+          d_model:      dimension of embeddings
+          dropout:      randomly zeroes-out some of the input
+          max_length:   max sequence length
+        """
+        # inherit from Module
         super().__init__()
+
+        # initialize dropout
         self.dropout = nn.Dropout(p=dropout)
 
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+        # create tensor of 0s
+        pe = torch.zeros(max_length, d_model)
 
-    def forward(self, x: Tensor) -> Tensor:
+        # create position column
+        k = torch.arange(0, max_length).unsqueeze(1)
+
+        # calc divisor for positional encoding
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model)
+        )
+
+        # calc sine on even indices
+        pe[:, 0::2] = torch.sin(k * div_term)
+
+        # calc cosine on odd indices
+        pe[:, 1::2] = torch.cos(k * div_term)
+
+        # add dimension
+        pe = pe.unsqueeze(0)
+
+        # buffers are saved in state_dict but not trained by the optimizer
+        self.register_buffer("pe", pe)
+
+    def forward(self, x: Tensor):
         """
-        Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        Args:
+          x:        embeddings (batch_size, seq_length, d_model)
+
+        Returns:
+                    embeddings + positional encodings (batch_size, seq_length, d_model)
         """
-        x = x + self.pe[:x.size(0)]
+        # add positional encoding to the embeddings
+        x = x + self.pe[:, : x.size(1)].requires_grad_(False)
+
+        # perform dropout
         return self.dropout(x)
