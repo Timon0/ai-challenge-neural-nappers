@@ -32,36 +32,40 @@ class ClassificationHead(nn.Module):
 
 class TransformerEncoderClassifier(nn.Module):
 
-    def __init__(self, num_features=2, encoder_layer_nhead=4, num_layers=2, num_classes=2,
+    def __init__(self, num_features=2, encoder_layer_nhead=4, num_layers=2, dim_model=64, num_classes=2,
                  sequence_length=49, dropout: float = 0.1):
         super().__init__()
 
         self.model_type = 'Transformer'
 
-        self.encoder_layer_nhead = encoder_layer_nhead
         self.num_features = num_features
+        self.encoder_layer_nhead = encoder_layer_nhead
         self.num_layers = num_layers
+        self.dim_model = dim_model
         self.num_classes = num_classes
         self.sequence_length = sequence_length
 
-        self.pos_encoder = PositionalEncoding(self.num_features, dropout, self.sequence_length)
+        self.embedding = nn.Linear(self.num_features, self.dim_model)
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=self.num_features,
+        self.pos_encoder = PositionalEncoding(self.dim_model, dropout, self.sequence_length)
+
+        encoder_layer = nn.TransformerEncoderLayer(d_model=self.dim_model,
                                                    nhead=self.encoder_layer_nhead,
                                                    batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.num_layers)
 
-        self.classifier = ClassificationHead(seq_len=sequence_length, d_model=num_features, n_classes=num_classes)
+        self.classifier = ClassificationHead(seq_len=sequence_length, d_model=self.dim_model, n_classes=num_classes)
 
     def forward(self, src):
-        src = self.pos_encoder(src)
-        output = self.encoder(src)
+        output = self.embedding(src)
+        output = self.pos_encoder(output)
+        output = self.encoder(output)
         return self.classifier(output)
 
 
 class LightningModel(L.LightningModule):
 
-    def __init__(self, model=None, encoder_layer_dim=64, encoder_layer_nhead=1, num_layers=1, learning_rate=None):
+    def __init__(self, model=None, encoder_layer_nhead=4, num_layers=2, dim_model=64, learning_rate=None):
         super().__init__()
 
         self.save_hyperparameters()
@@ -69,15 +73,16 @@ class LightningModel(L.LightningModule):
         self.sequence_length = 49
         self.num_features = 2
         self.num_classes = 2
-        self.encoder_layer_dim = encoder_layer_dim
         self.encoder_layer_nhead = encoder_layer_nhead
         self.num_layers = num_layers
+        self.dim_model = dim_model
         self.learning_rate = learning_rate
 
         if model is None:
             self.model = TransformerEncoderClassifier(self.num_features,
                                                       self.encoder_layer_nhead,
                                                       self.num_layers,
+                                                      self.dim_model,
                                                       self.num_classes,
                                                       self.sequence_length)
         else:
