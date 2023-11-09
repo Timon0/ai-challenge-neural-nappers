@@ -9,53 +9,51 @@ from torchmetrics.classification import MulticlassAccuracy, MulticlassPrecision,
 
 class ConvBlock(nn.Module):
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int) -> None:
+    def __init__(self, conv_in_channels: int, conv_out_channels: int, conv_kernel_size: int, conv_stride: int, pool_kernel_size: int) -> None:
         super().__init__()
 
         self.layers = nn.Sequential(
-            nn.Conv1d(in_channels=in_channels,
-                      out_channels=out_channels,
-                      kernel_size=kernel_size,
-                      stride=stride),
-            nn.BatchNorm1d(num_features=out_channels),
+            nn.Conv1d(in_channels=conv_in_channels,
+                      out_channels=conv_out_channels,
+                      kernel_size=conv_kernel_size,
+                      stride=conv_stride),
             nn.ReLU(),
+            # nn.MaxPool1d(pool_kernel_size),
+            nn.Dropout(0.3),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore
-
         return self.layers(x)
 
 
 class PyTorchFCN(torch.nn.Module):
-    """A PyTorch implementation of the FCN Baseline
-    From https://arxiv.org/abs/1909.04939
 
-    Attributes
-    ----------
-    sequence_length:
-        The size of the input sequence
-    num_pred_classes:
-        The number of output classes
-    """
-    
     def __init__(self, in_channels: int = 2, num_pred_classes: int = 2) -> None:
         super(PyTorchFCN, self).__init__()
 
-        self.layers = torch.nn.Sequential(*[
-            ConvBlock(in_channels, 128, 8, 1),
-            ConvBlock(128, 256, 5, 1),
-            ConvBlock(256, 128, 3, 1),
+        self.conv_layers = nn.Sequential(*[
+            ConvBlock(in_channels, 128, 8, 1, 3),
+            ConvBlock(128, 256, 5, 1, 3),
+            ConvBlock(256, 128, 3, 1, 3),
         ])
-        self.final = nn.Linear(128, num_pred_classes)
+
+        self.flatten = nn.Flatten()
+
+        self.classifier = nn.Sequential(*[
+            nn.Linear(4608, 256),
+            nn.ReLU(),
+            nn.Linear(256, num_pred_classes)
+        ])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.layers(x)
-        return self.final(x.mean(dim=-1))
+        x = self.conv_layers(x)
+        x = self.flatten(x)
+        return self.classifier(x)
 
 
 class LightningModel(L.LightningModule):
 
-    def __init__(self, model=None, hidden_dim=None, num_hidden_layers=None, learning_rate=None, seq_len=None):
+    def __init__(self, model=None, learning_rate=None):
         super(LightningModel, self).__init__()
 
         self.save_hyperparameters()

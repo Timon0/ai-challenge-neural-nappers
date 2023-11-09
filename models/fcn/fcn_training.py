@@ -46,4 +46,6 @@ if __name__ == "__main__":
         },
     )
 
+    # wandb_logger.experiment.name = 'test'
+
     cli.trainer.fit(cli.model, cli.datamodule)
