@@ -1,10 +1,10 @@
-import sys
 import json
-import wandb
+import sys
 
+import wandb
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
-from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.cli import LightningCLI
+from lightning.pytorch.loggers import WandbLogger
 from watermark import watermark
 
 from data import CustomDataModule
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     model_name = "nn"
 
     # Logger
-    with open("../config/config.json", "r") as jsonfile:
+    with open("../../config/config.json", "r") as jsonfile:
         data = json.load(jsonfile)
         subscription_key = data["wandb"]["subscription_key"]
     wandb.login(key=subscription_key)

@@ -53,8 +53,8 @@ class CustomDataModule(L.LightningDataModule):
     def prepare_data(self):
         # load data
         dirname = os.path.dirname(__file__)
-        train_root_dir = os.path.join(dirname, "../data/processed/lag-features/train")
-        validation_root_dir = os.path.join(dirname, "../data/processed/lag-features/validation")
+        train_root_dir = os.path.join(dirname, "../../data/processed/lag-features/train")
+        validation_root_dir = os.path.join(dirname, "../../data/processed/lag-features/validation")
 
         train_overview = pd.read_parquet(os.path.join(train_root_dir, 'overview.parquet'), columns=['num_series_id', 'awake', 'series_index'])
         train_overview = train_overview.astype('int64')
