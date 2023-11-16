@@ -40,7 +40,9 @@ class PyTorchFCN(torch.nn.Module):
         self.flatten = nn.Flatten()
 
         self.classifier = nn.Sequential(*[
-            nn.Linear(4608, 256),
+            nn.Linear(4608, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Linear(256, num_pred_classes)
         ])
