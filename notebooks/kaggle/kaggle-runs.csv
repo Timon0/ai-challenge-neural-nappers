@@ -1,0 +1,12 @@
+run,name,score
+1,FixTimeBaseline-V1,0.006
+2,TimeRangeBaseline-V1,0.003
+3,TimeRangeBaseline-V2,0.002
+4,FixTimeBaseline-V2,0.021
+5,FixTimeBaseline-V3,0.021
+6,TimeRangeBaseline-V3,0.004
+7,DecisionTreeClassifier-V1,0.098
+8,DecisionTreeClassifier-V2,0.112
+9,DecisionTreeClassifier-V3,0.118
+10,MLP-V1,0.051
+11,MLP-V2,0.174
