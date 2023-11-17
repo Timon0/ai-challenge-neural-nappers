@@ -10,3 +10,4 @@ run,name,score
 9,DecisionTreeClassifier-V3,0.118
 10,MLP-V1,0.051
 11,MLP-V2,0.174
+12,FCN-V1,0.412
