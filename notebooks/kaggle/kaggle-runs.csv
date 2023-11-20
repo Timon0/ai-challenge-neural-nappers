@@ -11,3 +11,6 @@ run,name,score
 10,MLP-V1,0.051
 11,MLP-V2,0.174
 12,FCN-V1,0.412
+13,FCN-V2,0.469
+14,MLP-V3,0.401
+15,Transformer-V1,0.363
