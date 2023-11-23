@@ -1,6 +1,6 @@
 run,name,score
-1,FixTimeBaseline-V3,0.021
-2,TimeRangeBaseline-V3,0.004
+1,FixTimeBaseline,0.021
+2,TimeRangeBaseline,0.004
 3,DecisionTreeClassifier-V1,0.098
 4,DecisionTreeClassifier-V2,0.112
 5,DecisionTreeClassifier-V3,0.118
@@ -11,3 +11,4 @@ run,name,score
 10,MLP-V3,0.401
 11,Transformer-V1,0.363
 12,Transformer-V2,0.415
+13,RNN-V1,0.400
