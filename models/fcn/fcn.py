@@ -61,7 +61,7 @@ class LightningModel(L.LightningModule):
         self.save_hyperparameters()
 
         self.num_features = 2
-        self.num_classes = 2
+        self.num_classes = 1
         self.learning_rate = learning_rate
         self.seq_len = 49
 
@@ -70,14 +70,14 @@ class LightningModel(L.LightningModule):
             self.model = PyTorchFCN(self.num_features, self.num_classes)
 
         # metrics
-        metrics = MetricCollection([
-            MulticlassAccuracy(num_classes=self.num_classes),
-            MulticlassPrecision(num_classes=self.num_classes),
-            MulticlassRecall(num_classes=self.num_classes),
-            MulticlassF1Score(num_classes=self.num_classes)
-        ])
-        self.train_metrics = metrics.clone(prefix='train_')
-        self.val_metrics = metrics.clone(prefix='val_')
+        # metrics = MetricCollection([
+        #     MulticlassAccuracy(num_classes=self.num_classes),
+        #     MulticlassPrecision(num_classes=self.num_classes),
+        #     MulticlassRecall(num_classes=self.num_classes),
+        #     MulticlassF1Score(num_classes=self.num_classes)
+        # ])
+        # self.train_metrics = metrics.clone(prefix='train_')
+        # self.val_metrics = metrics.clone(prefix='val_')
 
     def forward(self, x):
         return self.model(x)
@@ -86,8 +86,8 @@ class LightningModel(L.LightningModule):
         loss, true_labels, logits = self._shared_step(batch)
 
         self.log('train_loss', loss)
-        self.train_metrics(logits, true_labels)
-        self.log_dict(self.train_metrics, on_epoch=True, on_step=False)
+        # self.train_metrics(logits, true_labels)
+        # self.log_dict(self.train_metrics, on_epoch=True, on_step=False)
         return loss
 
     def training_step_end(self, training_step_outputs):
@@ -97,8 +97,8 @@ class LightningModel(L.LightningModule):
         loss, true_labels, logits = self._shared_step(batch)
 
         self.log('val_loss', loss)
-        self.val_metrics(logits, true_labels)
-        self.log_dict(self.val_metrics)
+        # self.val_metrics(logits, true_labels)
+        # self.log_dict(self.val_metrics)
 
         return loss
 
